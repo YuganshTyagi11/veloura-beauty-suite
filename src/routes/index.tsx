@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import heroSalon from "../assets/hero-salon.jpg";
 import serviceColor from "../assets/service-color.jpg";
 import serviceCut from "../assets/service-cut.jpg";
@@ -142,21 +142,7 @@ function Index() {
                       Start Session
                     </button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
-                      <DialogTitle>AI Mirror Preview</DialogTitle>
-                      <DialogDescription>
-                        Experience our proprietary AI hairstyling preview technology.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                      <img src={aiMirror} alt="AI Mirror preview" className="w-full aspect-square object-cover rounded-lg" width={608} height={608} />
-                      <p className="text-sm text-muted-foreground">
-                        Upload a selfie to see how different cuts and colors look on you. Our AI analyzes facial geometry, hair density, and skin tone to suggest three architectural directions.
-                      </p>
-                      <Button className="w-full" onClick={() => setMirrorOpen(false)}>Try It Now</Button>
-                    </div>
-                  </DialogContent>
+                  <MirrorContent />
                 </Dialog>
               </div>
               <div className="relative">
@@ -224,6 +210,102 @@ function Index() {
         </div>
       </footer>
     </div>
+  );
+}
+
+const STYLES = [
+  { name: "Textured Bob", desc: "Chin-length with soft waves — flatters oval and heart faces." },
+  { name: "Layered Shag", desc: "Voluminous layers that enhance natural texture and movement." },
+  { name: "Blunt Lob", desc: "Sleek shoulder-length cut — clean lines for a refined silhouette." },
+];
+const COLORS = ["Warm Caramel Balayage", "Cool Ash Bronde", "Rich Espresso Gloss"];
+
+function MirrorContent() {
+  const [step, setStep] = useState<"upload" | "analyzing" | "results">("upload");
+  const [selfie, setSelfie] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelfie(reader.result as string);
+      setStep("analyzing");
+      setTimeout(() => setStep("results"), 2000);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function reset() {
+    setStep("upload");
+    setSelfie(null);
+  }
+
+  return (
+    <DialogContent className="sm:max-w-lg">
+      <DialogHeader>
+        <DialogTitle>AI Mirror{step === "results" ? " — Analysis Complete" : " Preview"}</DialogTitle>
+        <DialogDescription>
+          {step === "upload" && "Upload a selfie to see how different cuts and colors look on you."}
+          {step === "analyzing" && "Analyzing facial geometry, hair density, and skin tone..."}
+          {step === "results" && "Here are your recommended architectural directions."}
+        </DialogDescription>
+      </DialogHeader>
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+
+      {step === "upload" && (
+        <div className="grid gap-4 py-4">
+          <img src={aiMirror} alt="AI Mirror preview" className="w-full aspect-square object-cover rounded-lg" width={608} height={608} />
+          <p className="text-sm text-muted-foreground text-center">
+            Our proprietary AI analyzes facial geometry and hair density to suggest three architectural directions before the first cut.
+          </p>
+          <Button className="w-full" onClick={() => inputRef.current?.click()}>Try It Now</Button>
+        </div>
+      )}
+
+      {step === "analyzing" && (
+        <div className="flex flex-col items-center gap-6 py-12">
+          <div className="size-16 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+          <p className="text-sm text-muted-foreground animate-pulse">Scanning facial proportions...</p>
+        </div>
+      )}
+
+      {step === "results" && selfie && (
+        <div className="grid gap-6 py-4">
+          <div className="flex gap-4 items-start">
+            <img src={selfie} alt="Your selfie" className="size-24 rounded-full object-cover shrink-0 ring-2 ring-primary/30" />
+            <div>
+              <p className="text-sm font-medium mb-1">Face Shape Detected: <span className="text-primary">Oval</span></p>
+              <p className="text-sm text-muted-foreground">Skin Tone: Warm undertone · Medium contrast</p>
+            </div>
+          </div>
+          <div>
+            <h4 className="text-xs tracking-widest uppercase text-primary mb-3">Recommended Cuts</h4>
+            <div className="grid gap-3">
+              {STYLES.map((s, i) => (
+                <div key={i} className="ring-1 ring-border rounded-lg p-3">
+                  <p className="text-sm font-medium">{s.name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{s.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <h4 className="text-xs tracking-widest uppercase text-primary mb-3">Color Directions</h4>
+            <div className="flex flex-wrap gap-2">
+              {COLORS.map((c, i) => (
+                <span key={i} className="text-xs ring-1 ring-border rounded-full px-3 py-1">{c}</span>
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button className="flex-1" onClick={reset}>Try Another</Button>
+            <Button variant="outline" className="flex-1" onClick={() => setStep("upload")}>Close</Button>
+          </div>
+        </div>
+      )}
+    </DialogContent>
   );
 }
 
